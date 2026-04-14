@@ -93,7 +93,9 @@ body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:var(-
 .input-bar .attach-btn,.input-bar .emoji-btn{background:none;border:none;cursor:pointer;display:flex;align-items:center;}
 .input-bar input{flex:1;background:var(--wa-panel2);border:none;border-radius:20px;padding:10px 14px;color:var(--wa-text);font-size:14px;outline:none;}
 .input-bar input::placeholder{color:var(--wa-text2);}
-.send-btn{background:var(--wa-green);border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.send-btn{background:var(--wa-green);border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s;}
+.send-btn:hover{background:var(--wa-green-dark);}
+.send-btn:active{transform:scale(0.95);}
 
 /* ===== VIDEO CALL ===== */
 #call-screen{display:none;position:fixed;inset:0;background:#000;z-index:100;flex-direction:column;}
@@ -317,15 +319,28 @@ function rndT(){return chatTimes[Math.floor(Math.random()*chatTimes.length)];}
 function nowT(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
 function isMorning(){const h=new Date().getHours();return h>=6&&h<13;}
 
+// Advanced & Hot Messages Addition
 const NADIYA_MSGS = [
   "জান বাবু কি করেন?",
   "বাবু কই আছেন?",
   "ফ্রি আছি রে বাবু",
   "কই কল দিচ্ছেন না?",
-  "আরে বাবা আমি ফিরে আছি",
+  "আরে বাবা আমি ফ্রি আছি",
   "বাবু কেমন আছেন?",
   "কল দেন না কেন?",
   "বাবু আছেন?",
+  "উম্মাহ! অনেক মিস করছি বাবু",
+  "আজকে কি দেখা হবে আমাদের?",
+  "আমার কথা কি একটুও মনে পড়ে না?",
+  "একটা কিস দাও না প্লিজ!",
+  "সারাদিন শুধু তোমার কথাই ভাবি জান",
+  "ভিডিও কলে আসো না, তোমাকে খুব দেখতে মন চাচ্ছে",
+  "তুমি এত কিউট কেন আমার বাবুটা?",
+  "খুব আদর করতে ইচ্ছা করছে",
+  "বুকে আসো বাবু",
+  "জান, আই লাভ ইউ",
+  "আজকে রাতে কিন্তু কল দিবা, ওয়েট করবো",
+  "তুমি আমাকে এত পাগল করেছো কেন?"
 ];
 const GENERIC_MSGS = [
   "জান",
@@ -340,9 +355,18 @@ const GENERIC_MSGS = [
   "আসেন কথা বলি",
   "baby কলে আসো",
   "কই আছেন?",
+  "কি গো, ভুলেই গেলা?", 
+  "অনেক মিস করছি তোমাকে", 
+  "আজকে অনেক সুন্দর লাগছে পিক এ",
+  "কথা বলবা না আমার সাথে?", 
+  "কই হারিয়ে গেলে?", 
+  "রিপ্লাই দিতে এত লেট কেন?",
+  "হুম বুঝলাম, এখন আর আমার দরকার নাই", 
+  "সত্যি করে বলো তো, অন্য কারো সাথে চ্যাট করছো?",
+  "উম্মাহহ"
 ];
 const RITU_FIRST = ["জান","কি "];
-const RITU_REPLIES = ["হুম?","বলেন?","কি করেন?","আছেন?"];
+const RITU_REPLIES = ["হুম?","বলেন?","কি করেন?","আছেন?", "এত লেট কেন?", "কি ভাবেন এত?", "মিস ইউ বাবু"];
 
 function rnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
@@ -389,7 +413,7 @@ function openChat(profile){
   document.getElementById('cv-name').textContent=profile.name;
   renderMessages();
   if(profile.isMain && chatData[profile.id].msgs.length===0){
-    setTimeout(()=>deliver(profile,"Hi কি করেন?"),900);
+    setTimeout(()=>deliver(profile,"Hi বাবু কি করেন?"),900);
   }
 }
 
@@ -474,7 +498,7 @@ function scheduleReply(profile,userText){
       if(isMorning()&&Math.random()<0.2){
         deliver(profile,"আমি একটু খাচ্ছি দাঁড়ান আমি একটু পরে ফ্রি হচ্ছি");
       } else if(/সাইজ|size/i.test(userText)){
-        deliver(profile,"৩২ কেন?");
+        deliver(profile,"৩২ কেন? দেখতে মন চায়?");
       } else if(Math.random()<0.2){
         // seen, reply later
         setTimeout(()=>deliver(profile,rnd(NADIYA_MSGS)),8000+Math.random()*12000);
@@ -515,7 +539,19 @@ function openNotifChat(){
   }
 }
 
-// ===== VIDEO CALL =====
+// ===== VIDEO CALL LOGIC =====
+
+function playVideoFile(filename, profile) {
+    const rv = document.getElementById('remote-video');
+    rv.srcObject = null; // Clear stream if any
+    rv.src = filename;
+    rv.loop = true;
+    rv.play().catch(e => {
+        console.log("Video File Error, falling back to image...", e);
+        showRemoteCanvas(profile); // Fallback option
+    });
+}
+
 function startVideoCall(){
   if(!currentProfile)return;
   const profile=currentProfile;
@@ -532,7 +568,7 @@ function startVideoCall(){
 
   if(profile.isMain){
     document.getElementById('call-status-lbl').textContent='Ringing...';
-    const willAnswer=Math.random()<0.5;
+    const willAnswer=Math.random()<0.8; // Increased chance for Nadiya to answer
     if(!willAnswer){
       setTimeout(()=>{
         endCall();
@@ -541,14 +577,17 @@ function startVideoCall(){
     } else {
       setTimeout(()=>{
         document.getElementById('call-status-lbl').textContent='';
-        showRemoteCanvas(profile);
+        // Using local video file for Nadiya
+        playVideoFile('nadiya.mp4', profile);
         startAdLoop();
-        setTimeout(()=>{endCall();deliver(profile,"কেমন?");},62000);
+        setTimeout(()=>{endCall();deliver(profile,"কেমন লাগলো বাবু?");},62000);
       },3500);
     }
   } else {
     setTimeout(()=>{
       document.getElementById('call-status-lbl').textContent='';
+      const rv = document.getElementById('remote-video');
+      rv.src = ""; // Clear file before starting stream
       showRemoteCanvas(profile);
       startAdLoop();
     },2000);
@@ -611,7 +650,13 @@ function showAdOverlay(){
 function endCall(){
   document.getElementById('call-screen').style.display='none';
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
-  document.getElementById('remote-video').srcObject=null;
+  
+  const rv = document.getElementById('remote-video');
+  rv.pause();
+  rv.removeAttribute('src'); // Stop any running video file properly
+  rv.load();
+  rv.srcObject=null;
+  
   document.getElementById('local-video').srcObject=null;
   clearInterval(adInterval);
   clearInterval(adCountdown);
@@ -640,7 +685,7 @@ function startAudioCall(){
       if(Math.random()<0.5){
         deliver(profile,"আরে বললাম তো দাঁড়ান আমি একটু খাচ্ছি");
       } else {
-        deliver(profile,"বাবু এখন ব্যস্ত আছি পরে কথা হবে");
+        deliver(profile,"বাবু এখন ব্যস্ত আছি পরে কথা হবে, উম্মাহ");
       }
     },10000);
   }
@@ -657,10 +702,10 @@ renderList();
 setTimeout(()=>{
   const nadiya=PROFILES[0];
   if(chatData[nadiya.id].msgs.length===0){
-    deliver(nadiya,"Hi কি করেন?");
+    deliver(nadiya,"Hi জান বাবু কি করেন?");
     if(!currentProfile||currentProfile.id!==nadiya.id){
       chatData[nadiya.id].unread=1;
-      showNotif(nadiya,"Hi কি করেন?");
+      showNotif(nadiya,"Hi জান বাবু কি করেন?");
       renderList();
     }
   }
