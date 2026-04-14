@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BD Chat</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --wa-green:#00a884;
+  --wa-green-dark:#008069;
+  --wa-bg:#111b21;
+  --wa-panel:#202c33;
+  --wa-panel2:#2a3942;
+  --wa-text:#e9edef;
+  --wa-text2:#8696a0;
+  --wa-msg-out:#005c4b;
+  --wa-msg-in:#202c33;
+  --wa-border:#2a3942;
+  --wa-hover:#2a3942;
+  --wa-tick:#53bdeb;
+}
+html,body{height:100%;overflow:hidden;background:var(--wa-bg);}
+body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--wa-text);}
+#app{height:100vh;display:flex;flex-direction:column;position:relative;}
+
+/* ===== HOME ===== */
+#home{display:flex;flex-direction:column;height:100%;background:var(--wa-bg);}
+.wa-topbar{background:var(--wa-panel);padding:14px 16px 0;}
+.wa-topbar-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.wa-topbar-row h1{font-size:20px;font-weight:600;color:var(--wa-text);}
+.wa-topbar-icons{display:flex;gap:18px;}
+.wa-topbar-icons svg{fill:var(--wa-text2);cursor:pointer;}
+.wa-tabs{display:flex;gap:0;border-bottom:1px solid var(--wa-border);}
+.wa-tab{flex:1;text-align:center;padding:10px 0;font-size:13px;color:var(--wa-text2);border-bottom:2px solid transparent;cursor:pointer;}
+.wa-tab.active{color:var(--wa-green);border-bottom-color:var(--wa-green);}
+.search-bar{background:var(--wa-panel);padding:8px 12px 10px;}
+.search-inner{display:flex;align-items:center;background:var(--wa-panel2);border-radius:8px;padding:8px 12px;gap:8px;}
+.search-inner input{flex:1;background:transparent;border:none;outline:none;color:var(--wa-text);font-size:14px;}
+.search-inner input::placeholder{color:var(--wa-text2);}
+#chat-list{flex:1;overflow-y:auto;}
+#chat-list::-webkit-scrollbar{width:3px;}
+#chat-list::-webkit-scrollbar-thumb{background:var(--wa-panel2);}
+.chat-item{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;position:relative;}
+.chat-item:active{background:var(--wa-hover);}
+.chat-item::after{content:'';position:absolute;bottom:0;left:72px;right:0;height:1px;background:rgba(255,255,255,0.05);}
+.chat-avatar{position:relative;flex-shrink:0;}
+.chat-avatar img{width:50px;height:50px;border-radius:50%;object-fit:cover;}
+.online-ring{position:absolute;bottom:1px;right:1px;width:12px;height:12px;background:#25d366;border-radius:50%;border:2px solid var(--wa-bg);}
+.chat-body{flex:1;min-width:0;}
+.chat-name-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.chat-name{font-size:16px;font-weight:400;color:var(--wa-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.chat-time{font-size:11px;color:var(--wa-text2);white-space:nowrap;}
+.chat-preview-row{display:flex;justify-content:space-between;align-items:center;}
+.chat-preview{font-size:13px;color:var(--wa-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px;}
+.unread-dot{background:var(--wa-green);color:#fff;font-size:11px;border-radius:50%;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px;font-weight:600;flex-shrink:0;}
+
+/* ===== CHAT VIEW ===== */
+#chat-view{display:none;flex-direction:column;height:100%;background:var(--wa-bg);}
+.chat-header{background:var(--wa-panel);padding:8px 10px;display:flex;align-items:center;gap:10px;min-height:56px;}
+.back-btn{background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;}
+.ch-avatar img{width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;}
+.ch-info{flex:1;cursor:pointer;}
+.ch-name{font-size:15px;font-weight:500;color:var(--wa-text);}
+.ch-status{font-size:12px;color:var(--wa-green);margin-top:1px;}
+.ch-actions{display:flex;gap:16px;}
+.ch-actions button{background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:4px;}
+.messages-wrap{flex:1;overflow-y:auto;background:var(--wa-bg);position:relative;}
+.messages-wrap::-webkit-scrollbar{width:3px;}
+.messages-wrap::-webkit-scrollbar-thumb{background:var(--wa-panel2);}
+/* WA chat wallpaper subtle */
+.messages-wrap::before{content:'';position:absolute;inset:0;opacity:0.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='20' cy='20' r='8' fill='%23fff' opacity='.3'/%3E%3Ccircle cx='60' cy='60' r='8' fill='%23fff' opacity='.3'/%3E%3C/svg%3E");pointer-events:none;}
+.messages{padding:10px 10px 6px;display:flex;flex-direction:column;gap:2px;min-height:100%;}
+.msg-wrap{display:flex;flex-direction:column;}
+.msg-wrap.out{align-items:flex-end;}
+.msg-wrap.in{align-items:flex-start;}
+.msg{max-width:72%;padding:6px 10px 20px;border-radius:7.5px;font-size:14.2px;line-height:1.45;word-break:break-word;position:relative;}
+.msg.out{background:var(--wa-msg-out);border-top-right-radius:0;}
+.msg.in{background:var(--wa-msg-in);border-top-left-radius:0;}
+.msg-foot{position:absolute;bottom:4px;right:8px;display:flex;align-items:center;gap:3px;}
+.msg-foot .t{font-size:10.5px;color:rgba(255,255,255,0.45);}
+.msg.in .msg-foot .t{color:var(--wa-text2);}
+.tick svg{width:14px;height:9px;}
+.date-sep{text-align:center;margin:10px 0;font-size:11.5px;color:var(--wa-text2);}
+.date-sep span{background:var(--wa-panel);padding:4px 10px;border-radius:6px;}
+.typing-wrap{padding:0 10px 6px;display:none;}
+.typing-bubble{background:var(--wa-msg-in);padding:9px 14px;border-radius:7.5px;border-top-left-radius:0;display:inline-flex;align-items:center;gap:4px;}
+.typing-bubble i{display:inline-block;width:7px;height:7px;background:var(--wa-text2);border-radius:50%;animation:dot 1.2s infinite;}
+.typing-bubble i:nth-child(2){animation-delay:.2s;}
+.typing-bubble i:nth-child(3){animation-delay:.4s;}
+@keyframes dot{0%,60%,100%{transform:translateY(0)opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+.input-bar{background:var(--wa-panel);padding:8px 10px;display:flex;align-items:center;gap:8px;}
+.input-bar .attach-btn,.input-bar .emoji-btn{background:none;border:none;cursor:pointer;display:flex;align-items:center;}
+.input-bar input{flex:1;background:var(--wa-panel2);border:none;border-radius:20px;padding:10px 14px;color:var(--wa-text);font-size:14px;outline:none;}
+.input-bar input::placeholder{color:var(--wa-text2);}
+.send-btn{background:var(--wa-green);border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* ===== VIDEO CALL ===== */
+#call-screen{display:none;position:fixed;inset:0;background:#000;z-index:100;flex-direction:column;}
+.call-remote{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1a1a;}
+#remote-video{width:100%;height:100%;object-fit:cover;}
+.call-local{position:absolute;top:16px;right:16px;width:88px;height:118px;border-radius:10px;overflow:hidden;background:#111;border:2px solid rgba(255,255,255,0.2);}
+#local-video{width:100%;height:100%;object-fit:cover;}
+.call-overlay{position:absolute;top:0;left:0;right:0;padding:48px 0 0;text-align:center;background:linear-gradient(to bottom,rgba(0,0,0,0.6) 0%,transparent 100%);}
+.call-name-lbl{font-size:22px;font-weight:500;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);}
+.call-status-lbl{font-size:13px;color:rgba(255,255,255,0.7);margin-top:4px;}
+.call-controls-bar{position:absolute;bottom:36px;left:0;right:0;display:flex;justify-content:center;gap:20px;}
+.cc-btn{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.cc-end{background:#f00;}
+.cc-mute,.cc-cam{background:rgba(255,255,255,0.2);}
+.cc-btn svg{fill:#fff;width:24px;height:24px;}
+#ad-overlay{display:none;position:absolute;top:0;left:0;right:0;background:rgba(0,0,0,0.92);z-index:10;padding:10px 12px;}
+.ad-content-row{display:flex;align-items:center;justify-content:center;min-height:56px;position:relative;}
+.ad-badge{position:absolute;top:0;right:0;width:24px;height:24px;border-radius:50%;background:#555;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer;}
+
+/* ===== AUDIO CALL ===== */
+#audio-call{display:none;position:fixed;inset:0;background:#1a2e1a;z-index:100;flex-direction:column;align-items:center;justify-content:center;}
+#audio-call .ac-avatar{width:110px;height:110px;border-radius:50%;overflow:hidden;border:3px solid var(--wa-green);margin-bottom:18px;}
+#audio-call .ac-avatar img{width:100%;height:100%;object-fit:cover;}
+#audio-call .ac-name{font-size:24px;font-weight:500;margin-bottom:6px;}
+#audio-call .ac-status{font-size:14px;color:var(--wa-text2);margin-bottom:50px;}
+.ac-btns{display:flex;gap:28px;}
+.ac-btn{width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ac-btn svg{fill:#fff;width:24px;height:24px;}
+.ac-end{background:#e00;}
+.ac-mute{background:rgba(255,255,255,0.15);}
+.ac-spk{background:rgba(255,255,255,0.15);}
+
+/* ===== NOTIFICATION ===== */
+#notif{position:fixed;top:-90px;left:0;right:0;background:var(--wa-panel2);padding:10px 14px;display:flex;align-items:center;gap:10px;z-index:400;cursor:pointer;transition:top .35s cubic-bezier(.4,0,.2,1);box-shadow:0 4px 16px rgba(0,0,0,0.5);}
+#notif img{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+#notif-name{font-size:13px;font-weight:600;color:var(--wa-text);}
+#notif-msg{font-size:13px;color:var(--wa-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div id="home">
+  <div class="wa-topbar">
+    <div class="wa-topbar-row">
+      <h1>BD Chat</h1>
+      <div class="wa-topbar-icons">
+        <svg width="22" height="22" viewBox="0 0 24 24"><path d="M6.5 10h-2v7h2v-7zm6 0h-2v7h2v-7zm8.5 9H2v2h19v-2zm-2.5-9h-2v7h2v-7zM11.5 1L2 6v2h19V6l-9.5-5z"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+      </div>
+    </div>
+    <div class="wa-tabs">
+      <div class="wa-tab active">CHATS</div>
+      <div class="wa-tab">STATUS</div>
+      <div class="wa-tab">CALLS</div>
+    </div>
+  </div>
+  <div class="search-bar">
+    <div class="search-inner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#8696a0"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="text" id="search-input" placeholder="Search or start new chat">
+    </div>
+  </div>
+  <div id="chat-list"></div>
+</div>
+
+<!-- CHAT VIEW -->
+<div id="chat-view">
+  <div class="chat-header">
+    <button class="back-btn" onclick="goHome()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#e9edef"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </button>
+    <div class="ch-avatar">
+      <img id="cv-img" src="" alt="">
+    </div>
+    <div class="ch-info">
+      <div class="ch-name" id="cv-name"></div>
+      <div class="ch-status">online</div>
+    </div>
+    <div class="ch-actions">
+      <button onclick="startVideoCall()" title="Video call">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#8696a0"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+      </button>
+      <button onclick="startAudioCall()" title="Voice call">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#8696a0"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.58.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.01L6.6 10.8z"/></svg>
+      </button>
+      <button>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#8696a0"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="messages-wrap" id="messages-wrap">
+    <div class="messages" id="messages">
+      <div class="date-sep"><span>Today</span></div>
+    </div>
+    <div class="typing-wrap" id="typing-wrap">
+      <div class="typing-bubble"><i></i><i></i><i></i></div>
+    </div>
+  </div>
+  <div class="input-bar">
+    <button class="emoji-btn">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#8696a0"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+    </button>
+    <input type="text" id="msg-input" placeholder="Message">
+    <button class="attach-btn">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#8696a0"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
+    </button>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- VIDEO CALL -->
+<div id="call-screen">
+  <div class="call-remote">
+    <video id="remote-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover;background:#000;"></video>
+  </div>
+  <div class="call-local">
+    <video id="local-video" autoplay muted playsinline></video>
+  </div>
+  <div class="call-overlay">
+    <div class="call-name-lbl" id="call-name-lbl"></div>
+    <div class="call-status-lbl" id="call-status-lbl">Calling...</div>
+  </div>
+  <div class="call-controls-bar">
+    <button class="cc-btn cc-mute">
+      <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+    </button>
+    <button class="cc-btn cc-end" onclick="endCall()">
+      <svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08C.11 12.9 0 12.65 0 12.38c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+    </button>
+    <button class="cc-btn cc-cam">
+      <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+    </button>
+  </div>
+  <div id="ad-overlay">
+    <div class="ad-content-row">
+      <script async="async" data-cfasync="false" src="https://pl29152210.profitablecpmratenetwork.com/1f9d3a9d7db78bf37b7f5aad0567ac34/invoke.js"></script>
+      <div id="container-1f9d3a9d7db78bf37b7f5aad0567ac34"></div>
+      <script>atOptions={'key':'84dda12b5a7414183f4efe7da479b73f','format':'iframe','height':50,'width':320,'params':{}};</script>
+      <script src="https://www.highperformanceformat.com/84dda12b5a7414183f4efe7da479b73f/invoke.js"></script>
+      <div class="ad-badge" id="ad-badge">6</div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIO CALL -->
+<div id="audio-call">
+  <div class="ac-avatar"><img id="ac-img" src="" alt=""></div>
+  <div class="ac-name" id="ac-name"></div>
+  <div class="ac-status" id="ac-status">Ringing...</div>
+  <div class="ac-btns">
+    <button class="ac-btn ac-spk">
+      <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    </button>
+    <button class="ac-btn ac-end" onclick="endAudioCall()">
+      <svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08C.11 12.9 0 12.65 0 12.38c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+    </button>
+    <button class="ac-btn ac-mute">
+      <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div id="notif" onclick="openNotifChat()">
+  <img id="notif-img" src="" alt="">
+  <div style="flex:1;min-width:0;">
+    <div id="notif-name"></div>
+    <div id="notif-msg"></div>
+  </div>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="#8696a0"><path d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
+</div>
+
+<audio id="ringtone" loop preload="none">
+  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" type="audio/wav">
+</audio>
+
+<script>
+const PROFILES = [
+  {id:0,img:"https://i.imgur.com/02ijqjE.jpeg",name:"Nadiya Akter",isMain:true},
+  {id:1,img:"https://i.imgur.com/gnrCWO1.jpeg",name:"Sumaiya Aktar"},
+  {id:2,img:"https://i.imgur.com/5iLg4mH.jpeg",name:"রিমি খাতুন"},
+  {id:3,img:"https://i.imgur.com/tVOoUN5.jpeg",name:"Tania Islam"},
+  {id:4,img:"https://i.imgur.com/USUwetb.jpeg",name:"Nusrat Jahan"},
+  {id:5,img:"https://i.imgur.com/cJKf6rE.jpeg",name:"মিম আক্তার"},
+  {id:6,img:"https://i.imgur.com/DcucgWI.jpeg",name:"Sabina Yasmin"},
+  {id:7,img:"https://i.imgur.com/m90I2Ys.jpeg",name:"Sharmin Sultana"},
+  {id:8,img:"https://i.imgur.com/WxTkFf1.jpeg",name:"আয়েশা সিদ্দিকা"},
+  {id:9,img:"https://i.imgur.com/5mAhvGc.jpeg",name:"Trisha Aktar"},
+  {id:10,img:"https://i.imgur.com/OwRofX8.jpeg",name:"রাফিয়া খান"},
+  {id:11,img:"https://i.imgur.com/Px3OXTr.jpeg",name:"Humaira Noreen"},
+  {id:12,img:"https://i.imgur.com/b50zd7W.jpeg",name:"Jannatul Ferdous"},
+  {id:13,img:"https://i.imgur.com/Tz7mkLt.jpeg",name:"Labiba Rahman"},
+  {id:14,img:"https://i.imgur.com/SLqeZoe.jpeg",name:"মরিয়ম আক্তার"},
+  {id:15,img:"https://i.imgur.com/E3BgPpU.jpeg",name:"Farzana Haque"},
+  {id:16,img:"https://i.imgur.com/kN0eL2t.jpeg",name:"Sadia Islam"},
+  {id:17,img:"https://i.imgur.com/fyg9vBi.jpeg",name:"নাহিদা আক্তার"},
+  {id:18,img:"https://i.imgur.com/GZRVlpJ.jpeg",name:"Rubaiyat Sultana"},
+  {id:19,img:"https://i.imgur.com/ss9JLIn.jpeg",name:"Habiba Noor"},
+  {id:20,img:"https://i.imgur.com/MFbvYRK.jpeg",name:"রিজিয়া খাতুন"},
+  {id:21,img:"https://i.imgur.com/mePNdaF.jpeg",name:"Tahmina Begum"},
+  {id:22,img:"https://i.imgur.com/6d0Uqqr.jpeg",name:"Shiuli Aktar"},
+  {id:23,img:"https://i.imgur.com/cSW0qyW.jpeg",name:"Roksana Parvin"},
+  {id:24,img:"https://i.imgur.com/uKao0sx.jpeg",name:"আফরোজা আক্তার"},
+  {id:25,img:"https://i.imgur.com/QWMIF7z.jpeg",name:"Ritu Aktar",isRitu:true},
+];
+
+const chatData = {};
+PROFILES.forEach(p=>chatData[p.id]={msgs:[],unread:0,rituFirst:false});
+
+let currentProfile = null;
+let localStream = null;
+let adInterval = null;
+let adCountdown = null;
+
+const chatTimes = ["10:32 AM","11:04 AM","11:48 AM","12:15 PM","1:02 PM","2:34 PM","3:17 PM","4:50 PM","6:09 PM","8:22 PM"];
+function rndT(){return chatTimes[Math.floor(Math.random()*chatTimes.length)];}
+function nowT(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+function isMorning(){const h=new Date().getHours();return h>=6&&h<13;}
+
+const NADIYA_MSGS = [
+  "জান বাবু কি করেন?",
+  "বাবু কই আছেন?",
+  "ফ্রি আছি রে বাবু",
+  "কই কল দিচ্ছেন না?",
+  "আরে বাবা আমি ফিরে আছি",
+  "বাবু কেমন আছেন?",
+  "কল দেন না কেন?",
+  "বাবু আছেন?",
+];
+const GENERIC_MSGS = [
+  "জান",
+  "কি বলেন?",
+  "হুম?",
+  "কি করেন?",
+  "বলেন?",
+  "আছেন?",
+  "আরে বাবু!",
+  "ফ্রি আছি",
+  "কল দেন না কেন?",
+  "আসেন কথা বলি",
+  "baby কলে আসো",
+  "কই আছেন?",
+];
+const RITU_FIRST = ["জান","কি "];
+const RITU_REPLIES = ["হুম?","বলেন?","কি করেন?","আছেন?"];
+
+function rnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+// ===== RENDER CHAT LIST =====
+function renderList(filter=''){
+  const el = document.getElementById('chat-list');
+  el.innerHTML='';
+  PROFILES.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase())).forEach(p=>{
+    const d = chatData[p.id];
+    const last = d.msgs.length ? d.msgs[d.msgs.length-1] : null;
+    const preview = last ? (last.out ? 'You: '+last.text : last.text) : 'Tap to chat';
+    const div = document.createElement('div');
+    div.className='chat-item';
+    div.innerHTML=`
+      <div class="chat-avatar">
+        <img src="${p.img}" alt="" loading="lazy">
+        <div class="online-ring"></div>
+      </div>
+      <div class="chat-body">
+        <div class="chat-name-row">
+          <span class="chat-name">${p.name}</span>
+          <span class="chat-time">${last ? nowT() : rndT()}</span>
+        </div>
+        <div class="chat-preview-row">
+          <span class="chat-preview">${preview}</span>
+          ${d.unread>0?`<span class="unread-dot">${d.unread}</span>`:''}
+        </div>
+      </div>`;
+    div.onclick=()=>openChat(p);
+    el.appendChild(div);
+  });
+}
+
+document.getElementById('search-input').addEventListener('input',e=>renderList(e.target.value));
+
+// ===== OPEN CHAT =====
+function openChat(profile){
+  currentProfile=profile;
+  chatData[profile.id].unread=0;
+  document.getElementById('home').style.display='none';
+  const cv=document.getElementById('chat-view');
+  cv.style.display='flex';
+  document.getElementById('cv-img').src=profile.img;
+  document.getElementById('cv-name').textContent=profile.name;
+  renderMessages();
+  if(profile.isMain && chatData[profile.id].msgs.length===0){
+    setTimeout(()=>deliver(profile,"Hi কি করেন?"),900);
+  }
+}
+
+function goHome(){
+  document.getElementById('chat-view').style.display='none';
+  document.getElementById('home').style.display='flex';
+  currentProfile=null;
+  renderList();
+}
+
+// ===== RENDER MESSAGES =====
+function renderMessages(){
+  const c=document.getElementById('messages');
+  c.innerHTML='<div class="date-sep"><span>Today</span></div>';
+  chatData[currentProfile.id].msgs.forEach(m=>{
+    const w=document.createElement('div');
+    w.className='msg-wrap '+(m.out?'out':'in');
+    w.innerHTML=`<div class="msg ${m.out?'out':'in'}">${m.text}
+      <div class="msg-foot">
+        <span class="t">${m.time}</span>
+        ${m.out?`<span class="tick"><svg viewBox="0 0 16 11" fill="none"><path d="M11.071.653L5.186 6.538 2.929 4.281 1.515 5.695l3.671 3.671L12.485 2.067 11.071.653zm2.829 0L7.015 7.538 6.3 6.823 4.886 8.237l2.129 2.129L15.314 2.067 13.9.653z" fill="#53bdeb"/></svg></span>`:''}
+      </div>
+    </div>`;
+    c.appendChild(w);
+  });
+  const wrap=document.getElementById('messages-wrap');
+  wrap.scrollTop=wrap.scrollHeight;
+}
+
+function addMsg(profile,text,out){
+  const msg={text,out,time:nowT()};
+  chatData[profile.id].msgs.push(msg);
+  if(currentProfile&&currentProfile.id===profile.id){
+    renderMessages();
+  } else if(!out){
+    chatData[profile.id].unread++;
+    showNotif(profile,text);
+  }
+}
+
+function deliver(profile,text){
+  addMsg(profile,text,false);
+  if(currentProfile&&currentProfile.id===profile.id) renderMessages();
+}
+
+// ===== SEND MESSAGE =====
+function sendMessage(){
+  const inp=document.getElementById('msg-input');
+  const text=inp.value.trim();
+  if(!text||!currentProfile)return;
+  inp.value='';
+  addMsg(currentProfile,text,true);
+  scheduleReply(currentProfile,text);
+}
+document.getElementById('msg-input').addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
+
+// ===== TYPING THEN REPLY =====
+function scheduleReply(profile,userText){
+  const tw=document.getElementById('typing-wrap');
+  const wrap=document.getElementById('messages-wrap');
+  tw.style.display='block';
+  wrap.scrollTop=wrap.scrollHeight;
+
+  const delay=1200+Math.random()*2800;
+  setTimeout(()=>{
+    tw.style.display='none';
+    const msgs=chatData[profile.id].msgs;
+
+    if(profile.isRitu){
+      if(!chatData[profile.id].rituFirst){
+        chatData[profile.id].rituFirst=true;
+        deliver(profile,RITU_FIRST[0]);
+        setTimeout(()=>deliver(profile,RITU_FIRST[1]),900);
+      } else {
+        if(isMorning()&&Math.random()<0.3){
+          deliver(profile,"আমি একটু খাচ্ছি দাঁড়ান আমি একটু পরে ফ্রি হচ্ছি");
+        } else {
+          deliver(profile,rnd(RITU_REPLIES));
+        }
+      }
+    } else if(profile.isMain){
+      if(isMorning()&&Math.random()<0.2){
+        deliver(profile,"আমি একটু খাচ্ছি দাঁড়ান আমি একটু পরে ফ্রি হচ্ছি");
+      } else if(/সাইজ|size/i.test(userText)){
+        deliver(profile,"৩২ কেন?");
+      } else if(Math.random()<0.2){
+        // seen, reply later
+        setTimeout(()=>deliver(profile,rnd(NADIYA_MSGS)),8000+Math.random()*12000);
+      } else {
+        deliver(profile,rnd(NADIYA_MSGS));
+      }
+    } else {
+      if(isMorning()&&Math.random()<0.2){
+        deliver(profile,"আমি একটু খাচ্ছি দাঁড়ান আমি একটু পরে ফ্রি হচ্ছি");
+      } else if(Math.random()<0.2){
+        setTimeout(()=>deliver(profile,rnd(GENERIC_MSGS)),7000+Math.random()*10000);
+      } else {
+        deliver(profile,rnd(GENERIC_MSGS));
+      }
+    }
+  },delay);
+}
+
+// ===== NOTIFICATION =====
+let notifTimer=null;
+function showNotif(profile,text){
+  clearTimeout(notifTimer);
+  const el=document.getElementById('notif');
+  document.getElementById('notif-img').src=profile.img;
+  document.getElementById('notif-name').textContent=profile.name;
+  document.getElementById('notif-msg').textContent=text;
+  el._p=profile;
+  el.style.top='0';
+  notifTimer=setTimeout(()=>el.style.top='-90px',4500);
+}
+function openNotifChat(){
+  document.getElementById('notif').style.top='-90px';
+  const p=document.getElementById('notif')._p;
+  if(p){
+    document.getElementById('home').style.display='flex';
+    document.getElementById('chat-view').style.display='none';
+    openChat(p);
+  }
+}
+
+// ===== VIDEO CALL =====
+function startVideoCall(){
+  if(!currentProfile)return;
+  const profile=currentProfile;
+  document.getElementById('call-name-lbl').textContent=profile.name;
+  document.getElementById('call-status-lbl').textContent='Calling...';
+  document.getElementById('call-screen').style.display='flex';
+
+  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({video:true,audio:true}).then(stream=>{
+      localStream=stream;
+      document.getElementById('local-video').srcObject=stream;
+    }).catch(()=>{});
+  }
+
+  if(profile.isMain){
+    document.getElementById('call-status-lbl').textContent='Ringing...';
+    const willAnswer=Math.random()<0.5;
+    if(!willAnswer){
+      setTimeout(()=>{
+        endCall();
+        deliver(profile,"বাবু পরে কল করো আমি এখন ব্যস্ত");
+      },12000);
+    } else {
+      setTimeout(()=>{
+        document.getElementById('call-status-lbl').textContent='';
+        showRemoteCanvas(profile);
+        startAdLoop();
+        setTimeout(()=>{endCall();deliver(profile,"কেমন?");},62000);
+      },3500);
+    }
+  } else {
+    setTimeout(()=>{
+      document.getElementById('call-status-lbl').textContent='';
+      showRemoteCanvas(profile);
+      startAdLoop();
+    },2000);
+  }
+}
+
+function showRemoteCanvas(profile){
+  const canvas=document.createElement('canvas');
+  canvas.width=480;canvas.height=854;
+  const ctx=canvas.getContext('2d');
+  const rv=document.getElementById('remote-video');
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=()=>{
+    let brightness=1;
+    function draw(){
+      brightness+=(Math.random()-0.5)*0.005;
+      brightness=Math.max(0.92,Math.min(1.05,brightness));
+      ctx.filter=`brightness(${brightness})`;
+      ctx.drawImage(img,0,0,480,854);
+      requestAnimationFrame(draw);
+    }
+    draw();
+    if(canvas.captureStream)rv.srcObject=canvas.captureStream(15);
+  };
+  img.onerror=()=>{
+    ctx.fillStyle='#111';ctx.fillRect(0,0,480,854);
+    if(canvas.captureStream)rv.srcObject=canvas.captureStream(5);
+  };
+  img.src=profile.img;
+  rv.play().catch(()=>{});
+}
+
+function startAdLoop(){
+  showAdOverlay();
+  adInterval=setInterval(showAdOverlay,15000);
+}
+
+function showAdOverlay(){
+  const overlay=document.getElementById('ad-overlay');
+  overlay.style.display='block';
+  const badge=document.getElementById('ad-badge');
+  let t=6;
+  badge.textContent=t;
+  badge.style.cursor='default';
+  badge.onclick=null;
+  clearInterval(adCountdown);
+  adCountdown=setInterval(()=>{
+    t--;
+    badge.textContent=t;
+    if(t<=0){
+      clearInterval(adCountdown);
+      badge.textContent='✕';
+      badge.style.cursor='pointer';
+      badge.onclick=()=>{overlay.style.display='none';};
+    }
+  },1000);
+}
+
+function endCall(){
+  document.getElementById('call-screen').style.display='none';
+  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
+  document.getElementById('remote-video').srcObject=null;
+  document.getElementById('local-video').srcObject=null;
+  clearInterval(adInterval);
+  clearInterval(adCountdown);
+  document.getElementById('ad-overlay').style.display='none';
+}
+
+// ===== AUDIO CALL =====
+function startAudioCall(){
+  if(!currentProfile)return;
+  const profile=currentProfile;
+  document.getElementById('ac-img').src=profile.img;
+  document.getElementById('ac-name').textContent=profile.name;
+  document.getElementById('ac-status').textContent='Ringing...';
+  document.getElementById('audio-call').style.display='flex';
+
+  if(profile.isRitu||(!profile.isMain)){
+    // cut call, send msg
+    setTimeout(()=>{
+      endAudioCall();
+      deliver(profile,"কি বলেন?");
+    },3500);
+  } else {
+    // Nadiya: long ring, no answer, send msg
+    setTimeout(()=>{
+      endAudioCall();
+      if(Math.random()<0.5){
+        deliver(profile,"আরে বললাম তো দাঁড়ান আমি একটু খাচ্ছি");
+      } else {
+        deliver(profile,"বাবু এখন ব্যস্ত আছি পরে কথা হবে");
+      }
+    },10000);
+  }
+}
+
+function endAudioCall(){
+  document.getElementById('audio-call').style.display='none';
+}
+
+// ===== INIT =====
+renderList();
+
+// Nadiya auto welcome after 2s
+setTimeout(()=>{
+  const nadiya=PROFILES[0];
+  if(chatData[nadiya.id].msgs.length===0){
+    deliver(nadiya,"Hi কি করেন?");
+    if(!currentProfile||currentProfile.id!==nadiya.id){
+      chatData[nadiya.id].unread=1;
+      showNotif(nadiya,"Hi কি করেন?");
+      renderList();
+    }
+  }
+},2000);
+
+// Nadiya sends periodic messages (only Nadiya, every 45-90s)
+setInterval(()=>{
+  const nadiya=PROFILES[0];
+  if(chatData[nadiya.id].msgs.length>0 && Math.random()<0.5){
+    const msg=rnd(NADIYA_MSGS);
+    deliver(nadiya,msg);
+    if(!currentProfile||currentProfile.id!==nadiya.id){
+      chatData[nadiya.id].unread++;
+      showNotif(nadiya,msg);
+      renderList();
+    }
+  }
+},60000);
+</script>
+</body>
+</html>
